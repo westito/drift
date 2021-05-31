@@ -4,10 +4,16 @@ part 'example.g.dart';
 
 // Define tables that can model a database of recipes.
 
-@DataClassName('Category')
-class Categories extends Table {
-  IntColumn get id => integer().autoIncrement()();
-  TextColumn get description => text().nullable()();
+@UseRowClass(Categories)
+@HibernateTable()
+class Categories {
+  @HibernateColumn(columnType: HibernateColumnType.integer)
+  int id;
+
+  @HibernateColumn(columnType: HibernateColumnType.text)
+  String name;
+
+  Categories({this.id, this.name});
 }
 
 class Recipes extends Table {

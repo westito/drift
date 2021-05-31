@@ -7,111 +7,31 @@ part of 'example.dart';
 // **************************************************************************
 
 // ignore_for_file: unnecessary_brace_in_string_interps, unnecessary_this
-class Category extends DataClass implements Insertable<Category> {
-  final int id;
-  final String? description;
-  Category({required this.id, this.description});
-  factory Category.fromData(Map<String, dynamic> data, GeneratedDatabase db,
-      {String? prefix}) {
-    final effectivePrefix = prefix ?? '';
-    return Category(
-      id: const IntType()
-          .mapFromDatabaseResponse(data['${effectivePrefix}id'])!,
-      description: const StringType()
-          .mapFromDatabaseResponse(data['${effectivePrefix}description']),
-    );
-  }
-  @override
-  Map<String, Expression> toColumns(bool nullToAbsent) {
-    final map = <String, Expression>{};
-    map['id'] = Variable<int>(id);
-    if (!nullToAbsent || description != null) {
-      map['description'] = Variable<String?>(description);
-    }
-    return map;
-  }
-
-  CategoriesCompanion toCompanion(bool nullToAbsent) {
-    return CategoriesCompanion(
-      id: Value(id),
-      description: description == null && nullToAbsent
-          ? const Value.absent()
-          : Value(description),
-    );
-  }
-
-  factory Category.fromJson(Map<String, dynamic> json,
-      {ValueSerializer? serializer}) {
-    serializer ??= moorRuntimeOptions.defaultSerializer;
-    return Category(
-      id: serializer.fromJson<int>(json['id']),
-      description: serializer.fromJson<String?>(json['description']),
-    );
-  }
-  factory Category.fromJsonString(String encodedJson,
-          {ValueSerializer? serializer}) =>
-      Category.fromJson(
-          DataClass.parseJson(encodedJson) as Map<String, dynamic>,
-          serializer: serializer);
-  @override
-  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
-    serializer ??= moorRuntimeOptions.defaultSerializer;
-    return <String, dynamic>{
-      'id': serializer.toJson<int>(id),
-      'description': serializer.toJson<String?>(description),
-    };
-  }
-
-  Category copyWith(
-          {int? id, Value<String?> description = const Value.absent()}) =>
-      Category(
-        id: id ?? this.id,
-        description: description.present ? description.value : this.description,
-      );
-  @override
-  String toString() {
-    return (StringBuffer('Category(')
-          ..write('id: $id, ')
-          ..write('description: $description')
-          ..write(')'))
-        .toString();
-  }
-
-  @override
-  int get hashCode => $mrjf($mrjc(id.hashCode, description.hashCode));
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      (other is Category &&
-          other.id == this.id &&
-          other.description == this.description);
-}
-
-class CategoriesCompanion extends UpdateCompanion<Category> {
-  final Value<int> id;
-  final Value<String?> description;
+class CategoriesCompanion extends UpdateCompanion<Categories> {
+  final Value<int?> id;
+  final Value<String?> name;
   const CategoriesCompanion({
     this.id = const Value.absent(),
-    this.description = const Value.absent(),
+    this.name = const Value.absent(),
   });
   CategoriesCompanion.insert({
     this.id = const Value.absent(),
-    this.description = const Value.absent(),
+    this.name = const Value.absent(),
   });
-  static Insertable<Category> custom({
-    Expression<int>? id,
-    Expression<String?>? description,
+  static Insertable<Categories> custom({
+    Expression<int?>? id,
+    Expression<String?>? name,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
-      if (description != null) 'description': description,
+      if (name != null) 'name': name,
     });
   }
 
-  CategoriesCompanion copyWith({Value<int>? id, Value<String?>? description}) {
+  CategoriesCompanion copyWith({Value<int?>? id, Value<String?>? name}) {
     return CategoriesCompanion(
       id: id ?? this.id,
-      description: description ?? this.description,
+      name: name ?? this.name,
     );
   }
 
@@ -119,10 +39,10 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     if (id.present) {
-      map['id'] = Variable<int>(id.value);
+      map['id'] = Variable<int?>(id.value);
     }
-    if (description.present) {
-      map['description'] = Variable<String?>(description.value);
+    if (name.present) {
+      map['name'] = Variable<String?>(name.value);
     }
     return map;
   }
@@ -131,14 +51,14 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
   String toString() {
     return (StringBuffer('CategoriesCompanion(')
           ..write('id: $id, ')
-          ..write('description: $description')
+          ..write('name: $name')
           ..write(')'))
         .toString();
   }
 }
 
 class $CategoriesTable extends Categories
-    with TableInfo<$CategoriesTable, Category> {
+    with TableInfo<$CategoriesTable, Categories> {
   final GeneratedDatabase _db;
   final String? _alias;
   $CategoriesTable(this._db, [this._alias]);
@@ -146,43 +66,43 @@ class $CategoriesTable extends Categories
   @override
   late final GeneratedIntColumn id = _constructId();
   GeneratedIntColumn _constructId() {
-    return GeneratedIntColumn('id', $tableName, false,
-        hasAutoIncrement: true, declaredAsPrimaryKey: true);
+    return GeneratedIntColumn(
+      'id',
+      $tableName,
+      true,
+    );
   }
 
-  final VerificationMeta _descriptionMeta =
-      const VerificationMeta('description');
+  final VerificationMeta _nameMeta = const VerificationMeta('name');
   @override
-  late final GeneratedTextColumn description = _constructDescription();
-  GeneratedTextColumn _constructDescription() {
+  late final GeneratedTextColumn name = _constructName();
+  GeneratedTextColumn _constructName() {
     return GeneratedTextColumn(
-      'description',
+      'name',
       $tableName,
       true,
     );
   }
 
   @override
-  List<GeneratedColumn> get $columns => [id, description];
+  List<GeneratedColumn> get $columns => [id, name];
   @override
   $CategoriesTable get asDslTable => this;
   @override
-  String get $tableName => _alias ?? 'categories';
+  String get $tableName => _alias ?? '"Null (null)"';
   @override
-  final String actualTableName = 'categories';
+  final String actualTableName = '"Null (null)"';
   @override
-  VerificationContext validateIntegrity(Insertable<Category> instance,
+  VerificationContext validateIntegrity(Insertable<Categories> instance,
       {bool isInserting = false}) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
     if (data.containsKey('id')) {
       context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
     }
-    if (data.containsKey('description')) {
+    if (data.containsKey('name')) {
       context.handle(
-          _descriptionMeta,
-          description.isAcceptableOrUnknown(
-              data['description']!, _descriptionMeta));
+          _nameMeta, name.isAcceptableOrUnknown(data['name']!, _nameMeta));
     }
     return context;
   }
@@ -190,9 +110,13 @@ class $CategoriesTable extends Categories
   @override
   Set<GeneratedColumn> get $primaryKey => {id};
   @override
-  Category map(Map<String, dynamic> data, {String? tablePrefix}) {
-    return Category.fromData(data, _db,
-        prefix: tablePrefix != null ? '$tablePrefix.' : null);
+  Categories map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return Categories(
+      id: const IntType().mapFromDatabaseResponse(data['${effectivePrefix}id']),
+      name: const StringType()
+          .mapFromDatabaseResponse(data['${effectivePrefix}name']),
+    );
   }
 
   @override

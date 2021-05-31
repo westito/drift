@@ -89,8 +89,7 @@ class ParseDartStep extends Step {
   /// Parses a [Database] from the [ClassElement] which was annotated
   /// with `@UseMoor` and the [annotation] reader that reads the `@UseMoor`
   /// annotation.
-  Future<Database> parseDatabase(
-      ClassElement element, ConstantReader annotation) {
+  Future<Database> parseDatabase(ClassElement element, ConstantReader annotation) {
     return UseMoorParser(this).parseDatabase(element, annotation);
   }
 
@@ -104,9 +103,10 @@ class ParseDartStep extends Step {
   /// The [initializedBy] element should be the piece of code that caused the
   /// parsing (e.g. the database class that is annotated with `@UseMoor`). This
   /// will allow for more descriptive error messages.
-  Future<List<MoorTable>> parseTables(
-      Iterable<DartType> types, Element initializedBy) {
+  Future<List<MoorTable>> parseTables(Iterable<DartType> types, Element initializedBy) {
     return Future.wait(types.map((type) {
+      return _parseTable(type.element as ClassElement);
+      /*
       if (!_tableTypeChecker.isAssignableFrom(type.element)) {
         reportError(ErrorInDartCode(
           severity: Severity.criticalError,
@@ -116,7 +116,7 @@ class ParseDartStep extends Step {
         return Future.value(null);
       } else {
         return _parseTable(type.element as ClassElement);
-      }
+      }*/
     })).then((list) {
       // only keep tables that were resolved successfully
       return List.from(list.where((t) => t != null));

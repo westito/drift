@@ -241,6 +241,46 @@ class ColumnParser {
     );
   }
 
+  MoorColumn parseHibernate(ColumnField field) {
+    ColumnName name;
+    String foundExplicitName;
+    if (foundExplicitName != null) {
+      name = ColumnName.explicitly(foundExplicitName);
+    } else {
+      name = ColumnName.implicitly(ReCase(field.field.name).snakeCase);
+    }
+
+    final foundFeatures = <ColumnFeature>[];
+    final joinTypeRdr = field.annotation.getField('columnType');
+    final joinTypeType = joinTypeRdr.type as InterfaceType;
+    var enumFields =
+        joinTypeType.element.fields.where((f) => f.isEnumConstant).toList();
+
+    ColumnType columnType;
+    for (var i = 0; i < enumFields.length; i++) {
+      final cv = enumFields[i].computeConstantValue();
+      if (cv == joinTypeRdr) {
+        columnType = ColumnType.values[i];
+        break;
+      }
+    }
+
+    return MoorColumn(
+      type: columnType,
+      dartGetterName: field.field.name,
+      name: name,
+      overriddenJsonName: null,
+      customConstraints: null,
+      nullable: true,
+      features: foundFeatures,
+      defaultArgument: null,
+      clientDefaultCode: null,
+      typeConverter: null,
+      declaration: DartColumnDeclaration(field.field, base.step.file),
+      documentationComment: "",
+    );
+  }
+
   ColumnType _startMethodToColumnType(String startMethod) {
     return const {
       startBool: ColumnType.boolean,

@@ -1,6 +1,13 @@
 //@dart=2.9
 part of 'parser.dart';
 
+class ColumnField {
+  FieldElement field;
+  DartObject annotation;
+
+  ColumnField(this.field, this.annotation);
+}
+
 /// Parses a [MoorTable] from a Dart class.
 class TableParser {
   final MoorDartParser base;
@@ -8,41 +15,107 @@ class TableParser {
   TableParser(this.base);
 
   Future<MoorTable> parseTable(ClassElement element) async {
-    final sqlName = await _parseTableName(element);
-    if (sqlName == null) return null;
+    final hibernateTable = _getHibernateTableAnnotation(element);
+    if (hibernateTable == null) {
+      final sqlName = await _parseTableName(element);
+      if (sqlName == null) return null;
 
-    final columns = (await _parseColumns(element)).toList();
-    final primaryKey = await _readPrimaryKey(element, columns);
+      final columns = (await _parseColumns(element)).toList();
+      final primaryKey = await _readPrimaryKey(element, columns);
 
-    final dataClassInfo = _readDataClassInformation(columns, element);
+      final dataClassInfo = _readDataClassInformation(columns, element);
 
-    final table = MoorTable(
-      fromClass: element,
-      columns: columns,
-      sqlName: escapeIfNeeded(sqlName),
-      dartTypeName: dataClassInfo.enforcedName,
-      existingRowClass: dataClassInfo.existingClass,
-      generateReverseMapping: dataClassInfo.generateReverseMapping,
-      primaryKey: primaryKey,
-      overrideWithoutRowId: await _overrideWithoutRowId(element),
-      declaration: DartTableDeclaration(element, base.step.file),
-    );
+      final table = MoorTable(
+        fromClass: element,
+        columns: columns,
+        sqlName: escapeIfNeeded(sqlName),
+        dartTypeName: dataClassInfo.enforcedName,
+        existingRowClass: dataClassInfo.existingClass,
+        generateReverseMapping: dataClassInfo.generateReverseMapping,
+        primaryKey: primaryKey,
+        overrideWithoutRowId: await _overrideWithoutRowId(element),
+        declaration: DartTableDeclaration(element, base.step.file),
+      );
 
-    if (primaryKey != null && columns.any((element) => element.hasAI)) {
-      base.step.errors.report(ErrorInDartCode(
-        message: "Tables can't override primaryKey and use autoIncrement()",
-        affectedElement: element,
-      ));
+      if (primaryKey != null && columns.any((element) => element.hasAI)) {
+        base.step.errors.report(ErrorInDartCode(
+          message: "Tables can't override primaryKey and use autoIncrement()",
+          affectedElement: element,
+        ));
+      }
+
+      var index = 0;
+      for (final converter in table.converters) {
+        converter
+          ..index = index++
+          ..table = table;
+      }
+
+      return table;
+    } else {
+      final sqlName = hibernateTable.getField('tableName').toString() ??
+          ReCase(element.name).snakeCase;
+      if (sqlName == null) return null;
+
+      final columns = (await _parseHibernateColumns(element)).toList();
+      final primaryKey = {columns[0]};
+
+      final dataClassInfo = _readDataClassInformation(columns, element);
+
+      final table = MoorTable(
+        fromClass: element,
+        columns: columns,
+        sqlName: escapeIfNeeded(sqlName),
+        dartTypeName: dataClassInfo.enforcedName,
+        existingRowClass: dataClassInfo.existingClass,
+        generateReverseMapping: dataClassInfo.generateReverseMapping,
+        primaryKey: primaryKey,
+        overrideWithoutRowId: null,
+        declaration: DartTableDeclaration(element, base.step.file),
+      );
+
+      if (primaryKey != null && columns.any((element) => element.hasAI)) {
+        base.step.errors.report(ErrorInDartCode(
+          message: "Tables can't override primaryKey and use autoIncrement()",
+          affectedElement: element,
+        ));
+      }
+
+      var index = 0;
+      for (final converter in table.converters) {
+        converter
+          ..index = index++
+          ..table = table;
+      }
+
+      return table;
+    }
+  }
+
+  DartObject _getHibernateTableAnnotation(ClassElement element) {
+    for (final annotation in element.metadata) {
+      final computed = annotation.computeConstantValue();
+      final annotationClass = computed.type.element.name;
+
+      if (annotationClass == 'HibernateTable') {
+        return computed;
+      }
     }
 
-    var index = 0;
-    for (final converter in table.converters) {
-      converter
-        ..index = index++
-        ..table = table;
+    return null;
+  }
+
+  DartObject _getHibernateColumnAnnotation(FieldElement element) {
+    for (final annotation in element.metadata) {
+      final computed = annotation.computeConstantValue();
+      final annotationClass = computed.type.element.name;
+
+      if (annotationClass == 'HibernateColumn') {
+        return computed;
+      }
     }
 
-    return table;
+    return null;
   }
 
   _DataClassInformation _readDataClassInformation(
@@ -221,6 +294,20 @@ class TableParser {
           await base.loadElementDeclaration(field.getter) as MethodDeclaration;
 
       return await base.parseColumn(node, field.getter);
+    }));
+
+    return results.where((c) => c != null);
+  }
+
+  Future<Iterable<MoorColumn>> _parseHibernateColumns(
+      ClassElement element) async {
+    final fields = element.fields
+        .map((e) => ColumnField(e, _getHibernateColumnAnnotation(e)))
+        .where((field) => field.annotation != null)
+        .toSet();
+
+    final results = await Future.wait(fields.map((field) async {
+      return await base.parseHibernateColumn(field);
     }));
 
     return results.where((c) => c != null);

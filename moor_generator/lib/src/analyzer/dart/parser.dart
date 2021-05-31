@@ -46,6 +46,10 @@ class MoorDartParser {
     return Future.value(_columnParser.parse(declaration, element));
   }
 
+  Future<MoorColumn /*?*/ > parseHibernateColumn(ColumnField element) {
+    return Future.value(_columnParser.parseHibernate(element));
+  }
+
   @visibleForTesting
   Expression returnExpressionOfMethod(MethodDeclaration method) {
     final body = method.body;
